@@ -1,0 +1,201 @@
+14:48:05 ► curl -v 'https://127.0.0.1:443/hello'
+*   Trying 127.0.0.1:443...
+* Connected to 127.0.0.1 (127.0.0.1) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*  CAfile: /etc/ssl/cert.pem
+*  CApath: none
+* (304) (OUT), TLS handshake, Client hello (1):
+* (304) (IN), TLS handshake, Server hello (2):
+* (304) (IN), TLS handshake, Unknown (8):
+* (304) (IN), TLS handshake, Certificate (11):
+* SSL certificate problem: unable to get local issuer certificate
+* Closing connection 0
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+
+
+
+
+curl -v 'https://127.0.0.1:443/hello' --cacert ./client_certificates/intermediate.ca.pem
+*   Trying 127.0.0.1:443...
+* Connected to 127.0.0.1 (127.0.0.1) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*  CAfile: ./certificates/intermediate.ca.pem
+*  CApath: none
+* (304) (OUT), TLS handshake, Client hello (1):
+* (304) (IN), TLS handshake, Server hello (2):
+* (304) (IN), TLS handshake, Unknown (8):
+* (304) (IN), TLS handshake, Certificate (11):
+* (304) (IN), TLS handshake, CERT verify (15):
+* (304) (IN), TLS handshake, Finished (20):
+* (304) (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / AEAD-AES128-GCM-SHA256
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: C=TW; ST=Taipei; O=ImMockDS; OU=IT; CN=127.0.0.1
+*  start date: Aug 14 06:25:10 2022 GMT
+*  expire date: Aug 14 06:25:10 2023 GMT
+*  common name: 127.0.0.1 (matched)
+*  issuer: C=TW; ST=Taipei; O=ImIntermediateca; OU=IT; CN=www.intermidateca.com
+*  SSL certificate verify ok.
+* Using HTTP2, server supports multiplexing
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x7fba4a012400)
+> GET /hello HTTP/2
+> Host: 127.0.0.1
+> user-agent: curl/7.79.1
+> accept: */*
+>
+* Connection state changed (MAX_CONCURRENT_STREAMS == 250)!
+< HTTP/2 200
+< content-type: text/plain; charset=utf-8
+< content-length: 14
+< date: Sun, 14 Aug 2022 06:50:58 GMT
+<
+Hello, world!
+* Connection #0 to host 127.0.0.1 left intact
+
+
+
+15:14:53 ► curl -v 'https://127.0.0.1:443/hello' --cacert ./certificates/intermediate.ca.pem
+*   Trying 127.0.0.1:443...
+* Connected to 127.0.0.1 (127.0.0.1) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*  CAfile: ./certificates/intermediate.ca.pem
+*  CApath: none
+* (304) (OUT), TLS handshake, Client hello (1):
+* (304) (IN), TLS handshake, Server hello (2):
+* (304) (IN), TLS handshake, Unknown (8):
+* (304) (IN), TLS handshake, Request CERT (13):
+* (304) (IN), TLS handshake, Certificate (11):
+* (304) (IN), TLS handshake, CERT verify (15):
+* (304) (IN), TLS handshake, Finished (20):
+* (304) (OUT), TLS handshake, Certificate (11):
+* (304) (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / AEAD-AES128-GCM-SHA256
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: C=TW; ST=Taipei; O=ImMockDS; OU=IT; CN=127.0.0.1
+*  start date: Aug 14 06:25:10 2022 GMT
+*  expire date: Aug 14 06:25:10 2023 GMT
+*  common name: 127.0.0.1 (matched)
+*  issuer: C=TW; ST=Taipei; O=ImIntermediateca; OU=IT; CN=www.intermidateca.com
+*  SSL certificate verify ok.
+* Using HTTP2, server supports multiplexing
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x7f826080f600)
+> GET /hello HTTP/2
+> Host: 127.0.0.1
+> user-agent: curl/7.79.1
+> accept: */*
+>
+* LibreSSL SSL_read: error:1404C412:SSL routines:ST_OK:sslv3 alert bad certificate, errno 0
+* Failed receiving HTTP2 data
+* LibreSSL SSL_write: SSL_ERROR_SYSCALL, errno 0
+* Failed sending HTTP2 data
+* Connection #0 to host 127.0.0.1 left intact
+curl: (56) LibreSSL SSL_read: error:1404C412:SSL routines:ST_OK:sslv3 alert bad certificate, errno 0
+
+
+15:39:17 ► curl -v 'https://127.0.0.1:443/hello' --cacert ./client_certificates/intermediate.ca.pem --cert ./client_certificates/client.server.chain.pem --key ./client_certificates/client.server.key
+*   Trying 127.0.0.1:443...
+* Connected to 127.0.0.1 (127.0.0.1) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*  CAfile: ./client_certificates/intermediate.ca.pem
+*  CApath: none
+* (304) (OUT), TLS handshake, Client hello (1):
+* (304) (IN), TLS handshake, Server hello (2):
+* (304) (IN), TLS handshake, Unknown (8):
+* (304) (IN), TLS handshake, Request CERT (13):
+* (304) (IN), TLS handshake, Certificate (11):
+* (304) (IN), TLS handshake, CERT verify (15):
+* (304) (IN), TLS handshake, Finished (20):
+* (304) (OUT), TLS handshake, Certificate (11):
+* (304) (OUT), TLS handshake, CERT verify (15):
+* (304) (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / AEAD-AES128-GCM-SHA256
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: C=TW; ST=Taipei; O=ImMockDS; OU=IT; CN=127.0.0.1
+*  start date: Aug 14 06:25:10 2022 GMT
+*  expire date: Aug 14 06:25:10 2023 GMT
+*  common name: 127.0.0.1 (matched)
+*  issuer: C=TW; ST=Taipei; O=ImIntermediateca; OU=IT; CN=www.intermidateca.com
+*  SSL certificate verify ok.
+* Using HTTP2, server supports multiplexing
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x7fbf89013600)
+> GET /hello HTTP/2
+> Host: 127.0.0.1
+> user-agent: curl/7.79.1
+> accept: */*
+>
+* Connection state changed (MAX_CONCURRENT_STREAMS == 250)!
+< HTTP/2 200
+< content-type: text/plain; charset=utf-8
+< content-length: 14
+< date: Sun, 14 Aug 2022 07:39:20 GMT
+<
+Hello, world!
+* Connection #0 to host 127.0.0.1 left intact
+
+
+15:49:11 ► curl -v 'https://127.0.0.1:443/hello' --cacert ./client_certificates/intermediate.ca.pem --cert ./client_certificates/wrong.client.server.chain.pem --key ./client_certificates/client.server.key
+*   Trying 127.0.0.1:443...
+* Connected to 127.0.0.1 (127.0.0.1) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*  CAfile: ./client_certificates/intermediate.ca.pem
+*  CApath: none
+* (304) (OUT), TLS handshake, Client hello (1):
+* (304) (IN), TLS handshake, Server hello (2):
+* (304) (IN), TLS handshake, Unknown (8):
+* (304) (IN), TLS handshake, Request CERT (13):
+* (304) (IN), TLS handshake, Certificate (11):
+* (304) (IN), TLS handshake, CERT verify (15):
+* (304) (IN), TLS handshake, Finished (20):
+* (304) (OUT), TLS handshake, Certificate (11):
+* (304) (OUT), TLS handshake, CERT verify (15):
+* (304) (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / AEAD-AES128-GCM-SHA256
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: C=TW; ST=Taipei; O=ImMockDS; OU=IT; CN=127.0.0.1
+*  start date: Aug 14 06:25:10 2022 GMT
+*  expire date: Aug 14 06:25:10 2023 GMT
+*  common name: 127.0.0.1 (matched)
+*  issuer: C=TW; ST=Taipei; O=ImIntermediateca; OU=IT; CN=www.intermidateca.com
+*  SSL certificate verify ok.
+* Using HTTP2, server supports multiplexing
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x7f94d1011e00)
+> GET /hello HTTP/2
+> Host: 127.0.0.1
+> user-agent: curl/7.79.1
+> accept: */*
+>
+* Connection state changed (MAX_CONCURRENT_STREAMS == 250)!
+< HTTP/2 200
+< content-type: text/plain; charset=utf-8
+< content-length: 14
+< date: Sun, 14 Aug 2022 07:49:22 GMT
+<
+Hello, world!
+* Connection #0 to host 127.0.0.1 left intact
