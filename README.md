@@ -473,6 +473,9 @@ openssl x509 -req -CAcreateserial -days 365 -sha256\
 cat wrong.mock.ds.server.pem intermediate.ca.pem root.ca.pem > wrong.mock.ds.server.chain.pem
 ```
 
+可以看到在Server端如果掛的是錯誤的DomainName申請的憑證, 在Handshake過程中會失敗, 會顯示你的CommonName和hostName不相符
+`SSL: certificate subject name 'www.wrongdomain.com' does not match target host name '127.0.0.1'`
+
 ```sh
 curl -v 'https://127.0.0.1:443/hello' --cacert ./client_certificates/intermediate.ca.pem --cert ./client_certificates/wrong.client.server.chain.pem --key ./client_certificates/client.server.key
 *   Trying 127.0.0.1:443...
