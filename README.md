@@ -1,9 +1,14 @@
 # mTLS implement with Golang
-這個是記錄使用Golang實作mTLS的Project, 同時也測試如果使用了錯誤的DomainName申請憑證是否會影響Handshake的進行
+#mTLS #2WayTLS 
 
+---
 ## Code
+
 ```
 .
+├── .gitignore
+├── LICENSE
+├── README.md
 ├── certificates
 │   ├── client.server.chain.pem
 │   ├── client.server.pem
@@ -12,10 +17,11 @@
 │   ├── intermediate.ca.pem
 │   ├── intermediate.srl
 │   ├── mock.ds.server.chain.pem
+│   ├── mock.ds.server.chain.pem.sha1
 │   ├── mock.ds.server.csr
 │   ├── mock.ds.server.key
 │   ├── mock.ds.server.pem
-│   ├── note.md
+│   ├── mock.ds.server.pem.sha1
 │   ├── root.ca.key
 │   ├── root.ca.pem
 │   ├── root.srl
@@ -24,6 +30,7 @@
 │   ├── wrong.mock.ds.server.chain.pem
 │   ├── wrong.mock.ds.server.csr
 │   └── wrong.mock.ds.server.pem
+├── client.note
 ├── client_certificates
 │   ├── client.server.chain.pem
 │   ├── client.server.csr
@@ -34,12 +41,12 @@
 │   ├── wrong.client.server.pem
 │   └── wrong_client.server.csr
 ├── go.mod
-├── README.md
 └── server.go
 
-2 directories, 31 files
-```
+2 directories, 34 files
 
+```
+---
 
 server.go
 ```go
@@ -134,9 +141,10 @@ func Run_HTTPS_mTLS_with_wrong_certificate() {
 }
 ```
 
+---
 
+## Setup TLS Part
 
-## TLS
 ### Generate Root CA Certificate
 ```sh
 openssl genrsa -out root.ca.key 2048
@@ -145,6 +153,8 @@ openssl req -new -x509 -days 365 \
         -key root.ca.key \
         -out root.ca.crt
 ```
+
+---
 ### Generate Intermediate CA Certificate
 ```sh
 openssl genrsa -out intermediate.ca.key 2048
@@ -157,6 +167,8 @@ openssl x509 -req -CAcreateserial -days 365 \
         -in intermediate.ca.csr \
         -out intermediate.ca.pem
 ```
+
+---
 ### Generate Server Certificate
 ```sh
 openssl genrsa -out mock.ds.server.key 2048
@@ -169,11 +181,16 @@ openssl x509 -req -CAcreateserial -days 365 \
         -in mock.ds.server.csr \
         -out mock.ds.server.pem
 ```
+
+---
 ### Merge Certificate Chain
 ```sh
 cat mock.ds.server.pem intermediate.ca.pem root.ca.pem > mock.ds.server.chain.pem
 ```
 
+---
+### Test
+#### Fail case
 將mock.ds.server.chain.pem放到server中, 啟動後用cURL打API測試
 
 ```sh
@@ -200,7 +217,12 @@ how to fix it, please visit the web page mentioned above.
 ```
 
 /etc/ssl/cert.pem 這個路徑下並沒有上面的Issuer, 所以會判斷為`unable to get local issuer certificate`
+
+---
+#### Success case
 因此需要將CA憑證提供給ClientServer
+這樣就可以打通API
+以上是Server有掛SSL憑證, 屬於單向驗證
 
 ```sh
 curl -v 'https://127.0.0.1:443/hello' --cacert ./client_certificates/intermediate.ca.pem
@@ -246,13 +268,13 @@ Hello, world!
 * Connection #0 to host 127.0.0.1 left intact
 
 ```
-這樣就可以打通API
-以上是Server有掛SSL憑證, 屬於單向驗證
+
 
 ---
-## mTSL
+## Setup mTLS Part
 以下開始設定mTLS
 
+---
 ### Generate Client Certificate
 ```sh
 openssl genrsa -out client.server.key 2048
@@ -261,6 +283,7 @@ openssl req -new -sha256 -key client.server.key \
         -out client.server.csr
 ```
 
+---
 ### Sign client server csr
 ```sh
 openssl x509 -req -CAcreateserial -days 365 -sha256\
@@ -269,11 +292,17 @@ openssl x509 -req -CAcreateserial -days 365 -sha256\
         -in ../client_certificates/client.server.csr \
         -out client.server.pem
 ```
+
+---
 ### Merge Certificate Chain
 ```sh
 cat client.server.pem intermediate.ca.pem root.ca.pem > client.server.chain.pem
 ```
 
+---
+### Test
+
+#### Fail case
 ```sh
 curl -v 'https://127.0.0.1:443/hello' --cacert ./certificates/intermediate.ca.pem
 *   Trying 127.0.0.1:443...
@@ -318,6 +347,7 @@ curl -v 'https://127.0.0.1:443/hello' --cacert ./certificates/intermediate.ca.pe
 curl: (56) LibreSSL SSL_read: error:1404C412:SSL routines:ST_OK:sslv3 alert bad certificate, errno 0
 ```
 
+---
 直接用之前的方式進行呼叫, 會因為沒有回應Server的請求出示ClientSSLCertificate, 所以Handshake Failure.
 Server會印出Client沒有帶憑證的資訊
 
@@ -325,6 +355,8 @@ Server會印出Client沒有帶憑證的資訊
 2022/08/14 16:55:26 http: TLS handshake error from 127.0.0.1:62332: tls: client didn't provide a certificate
 ```
 
+---
+#### Success case
 ```sh
 curl -v 'https://127.0.0.1:443/hello' --cacert ./client_certificates/intermediate.ca.pem --cert ./client_certificates/client.server.chain.pem --key ./client_certificates/client.server.key
 *   Trying 127.0.0.1:443...
@@ -373,16 +405,31 @@ Hello, world!
 ```
 
 
-
+---
 ### Issue
+**Problem:**
+http: TLS handshake error from 127.0.0.1:61417: tls: failed to verify client certificate: x509: certificate signed by unknown authority (possibly because of "x509: cannot verify signature: insecure algorithm SHA1-RSA (temporarily override with GODEBUG=x509sha1=1)" while trying to verify candidate authority certificate "www.intermidateca.com")
 
-2022/08/14 15:31:09 http: TLS handshake error from 127.0.0.1:61417: tls: failed to verify client certificate: x509: certificate signed by unknown authority (possibly because of "x509: cannot verify signature: insecure algorithm SHA1-RSA (temporarily override with GODEBUG=x509sha1=1)" while trying to verify candidate authority certificate "www.intermidateca.com")
-
-Solution:
-sha1 change to sha256 when signing certificate
-
+**Solution:**
+原因是簽署憑證的時候如果沒指定HASH演算法, 則會使用預設的SHA1, 所以需要指定成SHA256就可以了
+```sh
+openssl x509 -req -CAcreateserial -days 365 -sha256\
+        -CA intermediate.ca.pem \
+        -CAkey intermediate.ca.key \
+        -in ../client_certificates/client.server.csr \
+        -out client.server.pem
+```
+```sh
+openssl x509 -req -CAcreateserial -days 365 -sha256\
+        -CA intermediate.ca.pem \
+        -CAkey intermediate.ca.key \
+        -in ../certificates/mock.ds.server.csr \
+        -out mock.ds.server.pem
+```
 > https://github.com/fatedier/frp/issues/2957
 
+---
+## Wrong domain in client ssl certificate test
 
 ### Gererate wrong domain certificate
 ```sh
@@ -391,6 +438,7 @@ openssl req -new -sha256 -key client.server.key \
         -out wrong.client.server.csr
 ```
 
+---
 ### Sign client server csr
 ```sh
 openssl x509 -req -CAcreateserial -days 365 -sha256\
@@ -399,15 +447,17 @@ openssl x509 -req -CAcreateserial -days 365 -sha256\
         -in ../client_certificates/wrong.client.server.csr \
         -out wrong.client.server.pem
 ```
+
+---
 ### Merge Certificate Chain
 ```sh
 cat wrong.client.server.pem intermediate.ca.pem root.ca.pem > wrong.client.server.chain.pem
 ```
 
-
-### Wrong domain in client ssl certificate test
-client ssl certificate common name is www.wrong.com
-real domain name is localhost
+---
+### Test
+client ssl certificate common name is `www.wrong.com`
+real domain name is `localhost`
 result: handshake is success
 
 ```sh
@@ -457,8 +507,8 @@ Hello, world!
 * Connection #0 to host 127.0.0.1 left intact
 ```
 
-
-### Wrong domain in server ssl certificate test
+---
+## Wrong domain in server ssl certificate test
 ```sh
 openssl req -new -sha256 -key mock.ds.server.key \
         -subj "/C=TW/ST=Taipei/O=ImMockDS/OU=IT/CN=www.wrongdomain.com" \
@@ -473,9 +523,11 @@ openssl x509 -req -CAcreateserial -days 365 -sha256\
 cat wrong.mock.ds.server.pem intermediate.ca.pem root.ca.pem > wrong.mock.ds.server.chain.pem
 ```
 
-可以看到在Server端如果掛的是錯誤的DomainName申請的憑證, 在Handshake過程中會失敗, 會顯示你的CommonName和hostName不相符
-`SSL: certificate subject name 'www.wrongdomain.com' does not match target host name '127.0.0.1'`
-
+---
+### Test
+server ssl certificate common name is `www.wrongdomain.com`
+real domain name is `localhost`
+result: handshake is failure.
 ```sh
 curl -v 'https://127.0.0.1:443/hello' --cacert ./client_certificates/intermediate.ca.pem --cert ./client_certificates/wrong.client.server.chain.pem --key ./client_certificates/client.server.key
 *   Trying 127.0.0.1:443...
@@ -509,4 +561,58 @@ More details here: https://curl.se/docs/sslcerts.html
 curl failed to verify the legitimacy of the server and therefore could not
 establish a secure connection to it. To learn more about this situation and
 how to fix it, please visit the web page mentioned above.
+```
+
+---
+## Test client using Server certificate
+測試Client使用Server憑證是否可以成功通過Server的mTLS檢查
+
+```sh
+curl -v 'https://127.0.0.1:443/hello' --cacert ./certificates/intermediate.ca.pem --cert ./certificates/mock.ds.server.chain.pem --key ./certificates/mock.ds.server.key
+*   Trying 127.0.0.1:443...
+* Connected to 127.0.0.1 (127.0.0.1) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*  CAfile: ./certificates/intermediate.ca.pem
+*  CApath: none
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Request CERT (13):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Certificate (11):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS handshake, CERT verify (15):
+* TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-CHACHA20-POLY1305
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: C=TW; ST=Taipei; O=ImMockDS; OU=IT; CN=127.0.0.1
+*  start date: Aug 14 06:25:10 2022 GMT
+*  expire date: Aug 14 06:25:10 2023 GMT
+*  common name: 127.0.0.1 (matched)
+*  issuer: C=TW; ST=Taipei; O=ImIntermediateca; OU=IT; CN=www.intermidateca.com
+*  SSL certificate verify ok.
+* Using HTTP2, server supports multi-use
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x11f812400)
+> GET /hello HTTP/2
+> Host: 127.0.0.1
+> user-agent: curl/7.77.0
+> accept: */*
+>
+* Connection state changed (MAX_CONCURRENT_STREAMS == 250)!
+< HTTP/2 200
+< content-type: text/plain; charset=utf-8
+< content-length: 14
+< date: Fri, 16 Sep 2022 04:44:09 GMT
+<
+Hello, world!
+* Connection #0 to host 127.0.0.1 left intact
 ```
